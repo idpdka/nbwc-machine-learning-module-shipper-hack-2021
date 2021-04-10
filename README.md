@@ -4,7 +4,7 @@
 ## Summary
 1. These codes are developed to fulfill the theme: Automation for Put Away Process in Warehouses
 2. These codes consists of 3 modules: training notebook (by AWS SageMaker Autopilot), data ingestor code (AWS Lambda), analytics worker code (AWS Lambda)
-3. These codes are developed directly in the AWS system (SageMaker and Lambda), hence it is not updated periodically on this repo.
+3. These codes are developed directly in the AWS system (SageMaker and Lambda), hence it is not commited periodically on this repo
 4. The architecture of the machine learning module is as follows:
 
 ![plot](./attachments/arch-ml.png)
