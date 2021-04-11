@@ -6,7 +6,7 @@ import csv
 import pymysql
 import requests
 import datetime
-import
+import time
 
 # grab environment variables
 SAGEMAKER_ENDPOINT_NAME = os.environ['SAGEMAKER_ENDPOINT_NAME']
@@ -22,7 +22,13 @@ except:
     sys.exit()
 
 def convert_date_to_unix_timestamp(date, form):
-    return int(time.mktime(datetime.datetime.strptime(string, form).timetuple()))
+    if date != '':
+        try:
+            return int(time.mktime(datetime.datetime.strptime(date, form).timetuple()))
+        except:
+            return int(time.mktime(datetime.datetime.strptime(date, "%m/%d/%Y").timetuple()))
+
+    return date
     
 def lambda_handler(event, context):
     for record in event['Records']:
@@ -64,19 +70,35 @@ def lambda_handler(event, context):
                     assigned_location_bin = loc_bin["location_bin"]["name"]
                     assigned_location_bin_id = loc_bin["location_bin"]["id"]
                     break
-                
+            
+            actual_payload["doc_rcvd_timestamp"] = convert_date_to_unix_timestamp(actual_payload["doc_rcvd_timestamp"], "%m/%d/%Y %H:%M")
+            actual_payload["received_timestamp"] = convert_date_to_unix_timestamp(actual_payload["received_timestamp"], "%m/%d/%Y %H:%M")
+            actual_payload["grn_date"] = convert_date_to_unix_timestamp(actual_payload["grn_date"], "%m/%d/%Y %H:%M")
+            actual_payload["mfg_date"] = convert_date_to_unix_timestamp(actual_payload["mfgdate"], "%d-%b-%y")
+            actual_payload["exp_date"] = convert_date_to_unix_timestamp(actual_payload["expdate"], "%d-%b-%y")
+            actual_payload["volumecbn"] = actual_payload["volumecbm"]
+
             actual_payload["is_automated"] = False
             actual_payload["is_dispatch"] = False
             actual_payload["is_done"] = False
+
+            actual_payload.pop('mfgdate', None)
+            actual_payload.pop('expdate', None)
+            actual_payload.pop('weightkg', None)
+            actual_payload.pop('volumecbm', None)
+            actual_payload.pop('Durationtilexpired', None)
+            actual_payload.pop('vulnerabilitylevel', None)
                 
             if assigned_location_bin != None:
                 actual_payload["category_id"] = category_id
                 actual_payload["location_bin_id"] = assigned_location_bin_id
                 actual_payload["is_automated"] = True
-                actual_payload["is_automated"] = True
                 actual_payload["is_dispatch"] = True
+                
+            print(actual_payload)
 
-            response = requests.post(url=f"{BACKEND_API_ENDPOINT}/api/v1/inbound/count-location-bins", data=actual_payload)
+            response = requests.post(f"{BACKEND_API_ENDPOINT}/api/v1/inbound/store", json=actual_payload)
+            print(response)
             
             with conn.cursor() as cur:
                 qry = "INSERT INTO `put_away_lists` (`po_no`, `location_bin`) VALUES (%s, %s)"
